@@ -9,3 +9,13 @@ export const getGroupExpenses = async (groupId) => {
   const response = await api.get(`/groups/${groupId}/expenses`);
   return response.data;
 };
+
+export const updateExpense = async (groupId, expenseId, expenseData) => {
+  const response = await api.patch(`/groups/${groupId}/expenses/${expenseId}`, expenseData);
+  return response.data;
+};
+
+export const deleteExpense = async (groupId, expenseId) => {
+  const response = await api.delete(`/groups/${groupId}/expenses/${expenseId}`);
+  return response.data;
+};

@@ -15,3 +15,9 @@ export const removeMemberValidation = [
   param('id').isInt().withMessage('Invalid group ID'),
   param('userId').isInt().withMessage('Invalid user ID')
 ];
+
+export const updateGroupValidation = [
+  param('id').isInt().withMessage('Invalid group ID'),
+  body('name').trim().notEmpty().withMessage('Group name is required'),
+  body('description').optional().trim()
+];

@@ -1,11 +1,13 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { ToastProvider } from './context/ToastContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import GroupDetail from './pages/GroupDetail';
+import NotFound from './pages/NotFound';
 
 const AppRoutes = () => {
   const { user } = useAuth();
@@ -36,7 +38,8 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<Navigate to={user ? '/dashboard' : '/login'} replace />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 };
@@ -46,7 +49,9 @@ function App() {
     <Router>
       <ThemeProvider>
         <AuthProvider>
-          <AppRoutes />
+          <ToastProvider>
+            <AppRoutes />
+          </ToastProvider>
         </AuthProvider>
       </ThemeProvider>
     </Router>

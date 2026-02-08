@@ -15,6 +15,21 @@ export const getGroupDetails = async (groupId) => {
   return response.data;
 };
 
+export const updateGroup = async (groupId, { name, description }) => {
+  const response = await api.patch(`/groups/${groupId}`, { name, description });
+  return response.data;
+};
+
+export const deleteGroup = async (groupId) => {
+  const response = await api.delete(`/groups/${groupId}`);
+  return response.data;
+};
+
+export const leaveGroup = async (groupId) => {
+  const response = await api.post(`/groups/${groupId}/leave`);
+  return response.data;
+};
+
 export const addGroupMember = async (groupId, userId, role = 'member') => {
   const response = await api.post(`/groups/${groupId}/members`, { user_id: userId, role });
   return response.data;

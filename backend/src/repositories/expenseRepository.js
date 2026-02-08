@@ -123,6 +123,103 @@ export const getGroupExpenses = async (groupId) => {
   return rows;
 };
 
+const reverseLedgerBalance = async (client, groupId, paidBy, splits) => {
+  for (const split of splits) {
+    if (split.user_id !== paidBy) {
+      await updateLedgerBalance(
+        client,
+        groupId,
+        paidBy,
+        split.user_id,
+        parseFloat(split.amount)
+      );
+    }
+  }
+};
+
+export const updateExpense = async (expenseId, groupId, title, amount, paidBy, splitType, splits) => {
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+
+    const existing = await getExpenseByIdForUpdate(client, expenseId);
+    if (!existing || existing.group_id !== parseInt(groupId)) {
+      throw new Error('Expense not found');
+    }
+
+    await reverseLedgerBalance(client, existing.group_id, existing.paid_by, existing.splits);
+
+    await client.query(
+      `UPDATE expenses SET title = $1, amount = $2, paid_by = $3, split_type = $4, updated_at = NOW()
+       WHERE id = $5`,
+      [title, amount, paidBy, splitType, expenseId]
+    );
+
+    await client.query('DELETE FROM expense_splits WHERE expense_id = $1', [expenseId]);
+
+    for (const split of splits) {
+      await client.query(
+        `INSERT INTO expense_splits (expense_id, user_id, amount, percentage) 
+         VALUES ($1, $2, $3, $4)`,
+        [expenseId, split.user_id, split.amount, split.percentage ?? null]
+      );
+    }
+
+    for (const split of splits) {
+      if (split.user_id !== paidBy) {
+        await updateLedgerBalance(client, groupId, split.user_id, paidBy, parseFloat(split.amount));
+      }
+    }
+
+    await client.query('COMMIT');
+    return expenseId;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
+export const deleteExpense = async (expenseId, groupId) => {
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+
+    const existing = await getExpenseByIdForUpdate(client, expenseId);
+    if (!existing || existing.group_id !== parseInt(groupId)) {
+      throw new Error('Expense not found');
+    }
+
+    await reverseLedgerBalance(client, existing.group_id, existing.paid_by, existing.splits);
+
+    await client.query('DELETE FROM expense_splits WHERE expense_id = $1', [expenseId]);
+    await client.query('DELETE FROM expenses WHERE id = $1', [expenseId]);
+
+    await client.query('COMMIT');
+    return true;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
+const getExpenseByIdForUpdate = async (client, expenseId) => {
+  const { rows: expenseRows } = await client.query(
+    `SELECT * FROM expenses WHERE id = $1`,
+    [expenseId]
+  );
+  if (expenseRows.length === 0) return null;
+
+  const { rows: splits } = await client.query(
+    `SELECT * FROM expense_splits WHERE expense_id = $1`,
+    [expenseId]
+  );
+  return { ...expenseRows[0], splits };
+};
+
 export const getExpenseById = async (expenseId) => {
   const { rows } = await query(
     `SELECT e.*, 

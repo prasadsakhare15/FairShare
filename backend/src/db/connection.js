@@ -13,8 +13,6 @@ const pool = new Pool({
   connectionTimeoutMillis: 10000,
 });
 
-console.log(process.env.DB_PASSWORD);
-
 export const query = (text, params) => pool.query(text, params);
 export const getClient = () => pool.connect();
 

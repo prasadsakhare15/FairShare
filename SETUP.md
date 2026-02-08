@@ -2,25 +2,21 @@
 
 ## Prerequisites
 - Node.js (v18+)
-- MySQL (v8+)
+- PostgreSQL (v12+)
 
 ## Step-by-Step Setup
 
 ### 1. Database Setup
 
 ```bash
-# Login to MySQL
-mysql -u root -p
-
-# Create database
-CREATE DATABASE fairshare;
-
-# Exit MySQL
-exit;
+# Create PostgreSQL database
+createdb fairshare
+# Or using psql:
+# psql -U postgres -c "CREATE DATABASE fairshare;"
 
 # Run schema (from backend directory)
 cd backend
-mysql -u root -p fairshare < src/db/schema.sql
+psql -U postgres -d fairshare -f src/db/schema.sql
 ```
 
 ### 2. Backend Setup
@@ -34,9 +30,10 @@ npm install
 # Create .env file
 cp .env.example .env
 
-# Edit .env with your MySQL credentials:
+# Edit .env with your PostgreSQL credentials:
 # DB_HOST=localhost
-# DB_USER=root
+# DB_PORT=5432
+# DB_USER=postgres
 # DB_PASSWORD=your_password
 # DB_NAME=fairshare
 # JWT_SECRET=your-random-secret-key
@@ -84,8 +81,8 @@ Frontend will run on `http://localhost:3000`
 ## Troubleshooting
 
 ### Backend won't start
-- Check MySQL is running: `mysql -u root -p`
-- Verify database exists: `SHOW DATABASES;`
+- Check PostgreSQL is running: `psql -U postgres -c "SELECT 1"`
+- Verify database exists: `psql -U postgres -l`
 - Check .env file has correct credentials
 - Ensure port 3001 is not in use
 
@@ -95,8 +92,8 @@ Frontend will run on `http://localhost:3000`
 - Check port 3000 is not in use
 
 ### Database connection errors
-- Verify MySQL is running
-- Check .env file credentials
+- Verify PostgreSQL is running
+- Check .env file credentials (DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME)
 - Ensure database `fairshare` exists
 - Run schema.sql if tables are missing
 

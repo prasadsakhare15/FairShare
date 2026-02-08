@@ -15,6 +15,19 @@ export const getGroupBalances = async (groupId) => {
   return rows;
 };
 
+export const getUserBalanceSummary = async (userId) => {
+  const { rows } = await query(
+    `SELECT 
+       COALESCE(SUM(CASE WHEN l.from_user_id = $1 THEN l.amount ELSE 0 END), 0) as you_owe,
+       COALESCE(SUM(CASE WHEN l.to_user_id = $1 THEN l.amount ELSE 0 END), 0) as you_are_owed
+     FROM ledger l
+     JOIN group_members gm ON l.group_id = gm.group_id
+     WHERE gm.user_id = $1`,
+    [userId]
+  );
+  return rows[0];
+};
+
 export const getUserBalanceInGroup = async (groupId, userId) => {
   const { rows } = await query(
     `SELECT 

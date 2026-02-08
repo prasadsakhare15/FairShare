@@ -35,6 +35,40 @@ export const getGroupDetails = async (req, res, next) => {
   }
 };
 
+export const updateGroup = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { name, description } = req.body;
+    await groupService.updateGroup(req.params.id, name, description, req.user.userId);
+
+    res.json({ message: 'Group updated successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteGroup = async (req, res, next) => {
+  try {
+    await groupService.deleteGroup(req.params.id, req.user.userId);
+    res.json({ message: 'Group deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const leaveGroup = async (req, res, next) => {
+  try {
+    await groupService.leaveGroup(req.params.id, req.user.userId);
+    res.json({ message: 'Left group successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const addMember = async (req, res, next) => {
   try {
     const errors = validationResult(req);

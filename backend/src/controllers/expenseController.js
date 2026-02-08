@@ -33,3 +33,37 @@ export const getGroupExpenses = async (req, res, next) => {
     next(error);
   }
 };
+
+export const updateExpense = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { title, amount, paid_by, split_type, splits } = req.body;
+    await expenseService.updateExpense(
+      req.params.id,
+      req.params.expenseId,
+      title,
+      amount,
+      paid_by,
+      split_type,
+      splits,
+      req.user.userId
+    );
+
+    res.json({ message: 'Expense updated successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteExpense = async (req, res, next) => {
+  try {
+    await expenseService.deleteExpense(req.params.id, req.params.expenseId, req.user.userId);
+    res.json({ message: 'Expense deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -10,6 +10,10 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'split_type_enum') THEN
     CREATE TYPE split_type_enum AS ENUM ('equal', 'exact', 'percentage');
   END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'settlement_request_status') THEN
+    CREATE TYPE settlement_request_status AS ENUM ('pending', 'approved', 'rejected');
+  END IF;
 END
 $$;
 
@@ -90,6 +94,22 @@ CREATE TABLE IF NOT EXISTS settlements (
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Settlement requests table (pending approval before becoming settlements)
+CREATE TABLE IF NOT EXISTS settlement_requests (
+  id SERIAL PRIMARY KEY,
+  group_id INTEGER NOT NULL REFERENCES user_groups(id) ON DELETE CASCADE,
+  from_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  to_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  amount NUMERIC(10, 2) NOT NULL,
+  initiator_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status settlement_request_status NOT NULL DEFAULT 'pending',
+  payment_method VARCHAR(100),
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  responded_at TIMESTAMPTZ,
+  CONSTRAINT valid_settlement_pair CHECK (from_user_id != to_user_id)
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_user_groups_created_by ON user_groups(created_by);
@@ -107,3 +127,5 @@ CREATE INDEX IF NOT EXISTS idx_settlements_group_id ON settlements(group_id);
 CREATE INDEX IF NOT EXISTS idx_settlements_from_user ON settlements(from_user_id);
 CREATE INDEX IF NOT EXISTS idx_settlements_to_user ON settlements(to_user_id);
 CREATE INDEX IF NOT EXISTS idx_settlements_created_at ON settlements(created_at);
+CREATE INDEX IF NOT EXISTS idx_settlement_requests_group ON settlement_requests(group_id);
+CREATE INDEX IF NOT EXISTS idx_settlement_requests_status ON settlement_requests(status);

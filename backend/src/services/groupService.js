@@ -59,6 +59,38 @@ export const removeMember = async (groupId, userId, memberToRemoveId) => {
   return await groupRepository.removeGroupMember(groupId, memberToRemoveId);
 };
 
+export const updateGroup = async (groupId, name, description, userId) => {
+  const requesterMember = await groupRepository.isGroupMember(groupId, userId);
+  if (!requesterMember || requesterMember.role !== 'admin') {
+    throw new Error('Only admins can update the group');
+  }
+
+  return await groupRepository.updateGroup(groupId, name, description);
+};
+
+export const deleteGroup = async (groupId, userId) => {
+  const requesterMember = await groupRepository.isGroupMember(groupId, userId);
+  if (!requesterMember || requesterMember.role !== 'admin') {
+    throw new Error('Only admins can delete the group');
+  }
+
+  return await groupRepository.deleteGroup(groupId);
+};
+
+export const leaveGroup = async (groupId, userId) => {
+  const requesterMember = await groupRepository.isGroupMember(groupId, userId);
+  if (!requesterMember) {
+    throw new Error('You are not a member of this group');
+  }
+
+  const adminCount = await groupRepository.getAdminCount(groupId);
+  if (requesterMember.role === 'admin' && adminCount <= 1) {
+    throw new Error('Cannot leave: you are the only admin. Transfer admin role or delete the group.');
+  }
+
+  return await groupRepository.removeGroupMember(groupId, userId);
+};
+
 export const updateMemberRole = async (groupId, userId, targetUserId, role) => {
   // Check if requester is admin
   const requesterMember = await groupRepository.isGroupMember(groupId, userId);

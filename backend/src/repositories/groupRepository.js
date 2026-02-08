@@ -27,6 +27,27 @@ export const createGroup = async (name, description, createdBy) => {
   }
 };
 
+export const updateGroup = async (groupId, name, description) => {
+  const result = await query(
+    'UPDATE user_groups SET name = $1, description = $2, updated_at = NOW() WHERE id = $3',
+    [name, description, groupId]
+  );
+  return result.rowCount > 0;
+};
+
+export const deleteGroup = async (groupId) => {
+  const result = await query('DELETE FROM user_groups WHERE id = $1', [groupId]);
+  return result.rowCount > 0;
+};
+
+export const getAdminCount = async (groupId) => {
+  const { rows } = await query(
+    "SELECT COUNT(*) as count FROM group_members WHERE group_id = $1 AND role = 'admin'",
+    [groupId]
+  );
+  return parseInt(rows[0]?.count ?? 0, 10);
+};
+
 export const getGroupById = async (groupId) => {
   const { rows } = await query(
     `SELECT g.*, u.name as creator_name 

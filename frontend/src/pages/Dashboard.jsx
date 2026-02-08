@@ -2,10 +2,16 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getUserGroups, createGroup } from '../services/groupService';
+import { getBalanceSummary } from '../services/userService';
+import { formatCurrency } from '../utils/formatUtils';
 import ThemeToggle from '../components/ThemeToggle';
+import SkeletonLoader from '../components/SkeletonLoader';
+import { useToast } from '../context/ToastContext';
 
 const Dashboard = () => {
+  const { showToast } = useToast();
   const [groups, setGroups] = useState([]);
+  const [balanceSummary, setBalanceSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [groupName, setGroupName] = useState('');
@@ -20,8 +26,12 @@ const Dashboard = () => {
 
   const loadGroups = async () => {
     try {
-      const data = await getUserGroups();
-      setGroups(data);
+      const [groupsData, summaryData] = await Promise.all([
+        getUserGroups(),
+        getBalanceSummary(),
+      ]);
+      setGroups(groupsData);
+      setBalanceSummary(summaryData);
     } catch (error) {
       console.error('Failed to load groups:', error);
     } finally {
@@ -39,7 +49,7 @@ const Dashboard = () => {
       setShowCreateModal(false);
       loadGroups();
     } catch (error) {
-      alert(error.userMessage || error.response?.data?.error || 'Failed to create group');
+      showToast(error.userMessage || error.response?.data?.error || 'Failed to create group');
     } finally {
       setCreating(false);
     }
@@ -47,8 +57,31 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <nav className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900/50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between h-16 items-center">
+              <SkeletonLoader className="h-8 w-24" />
+              <div className="flex gap-4">
+                <SkeletonLoader className="h-6 w-32" />
+                <SkeletonLoader className="h-6 w-16" />
+              </div>
+            </div>
+          </div>
+        </nav>
+        <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+          <div className="px-4 py-6 sm:px-0">
+            <div className="flex justify-between items-center mb-6">
+              <SkeletonLoader className="h-8 w-40" />
+              <SkeletonLoader className="h-10 w-32" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
+                <SkeletonLoader key={i} className="h-40 w-full rounded-lg" />
+              ))}
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
@@ -77,6 +110,18 @@ const Dashboard = () => {
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
+          {balanceSummary && (balanceSummary.youOwe > 0 || balanceSummary.youAreOwed > 0) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                <p className="text-sm text-red-700 dark:text-red-300">You owe</p>
+                <p className="text-2xl font-bold text-red-800 dark:text-red-200">{formatCurrency(balanceSummary.youOwe)}</p>
+              </div>
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                <p className="text-sm text-green-700 dark:text-green-300">You are owed</p>
+                <p className="text-2xl font-bold text-green-800 dark:text-green-200">{formatCurrency(balanceSummary.youAreOwed)}</p>
+              </div>
+            </div>
+          )}
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Your Groups</h2>
             <button

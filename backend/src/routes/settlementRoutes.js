@@ -1,9 +1,16 @@
 import express from 'express';
 import * as settlementController from '../controllers/settlementController.js';
+import * as settlementRequestController from '../controllers/settlementRequestController.js';
 import * as settlementValidation from '../validations/settlementValidation.js';
+import * as settlementRequestValidation from '../validations/settlementRequestValidation.js';
 import { authenticateToken } from '../middlewares/auth.js';
 
 const router = express.Router();
+
+router.post('/groups/:id/settlement-requests', authenticateToken, settlementRequestValidation.createRequestValidation, settlementRequestController.createRequest);
+router.get('/groups/:id/settlement-requests', authenticateToken, settlementRequestController.getGroupRequests);
+router.post('/groups/:id/settlement-requests/:requestId/approve', authenticateToken, settlementRequestController.approveRequest);
+router.post('/groups/:id/settlement-requests/:requestId/reject', authenticateToken, settlementRequestController.rejectRequest);
 
 router.post('/groups/:id/settlements', authenticateToken, settlementValidation.createSettlementValidation, settlementController.createSettlement);
 router.get('/groups/:id/settlements', authenticateToken, settlementController.getGroupSettlements);

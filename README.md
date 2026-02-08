@@ -7,8 +7,8 @@ A full-stack web application for tracking shared expenses and managing settlemen
 ### Backend
 - **Runtime**: Node.js
 - **Framework**: Express.js
-- **Database**: MySQL
-- **DB Driver**: mysql2 (no ORM)
+- **Database**: PostgreSQL
+- **DB Driver**: pg (no ORM)
 - **Authentication**: JWT (Access + Refresh Tokens)
 - **Architecture**: Layered MVC
 
@@ -50,7 +50,7 @@ FairShare/
 
 ### Prerequisites
 - Node.js (v18 or higher)
-- MySQL (v8 or higher)
+- PostgreSQL (v12 or higher)
 
 ### Backend Setup
 
@@ -69,11 +69,12 @@ npm install
 cp .env.example .env
 ```
 
-4. Update `.env` with your MySQL credentials:
+4. Update `.env` with your PostgreSQL credentials:
 ```
 PORT=3001
 DB_HOST=localhost
-DB_USER=root
+DB_PORT=5432
+DB_USER=postgres
 DB_PASSWORD=your_password
 DB_NAME=fairshare
 JWT_SECRET=your-secret-key-change-in-production
@@ -82,14 +83,21 @@ JWT_ACCESS_EXPIRY=15m
 JWT_REFRESH_EXPIRY=7d
 ```
 
-5. Create MySQL database:
-```sql
-CREATE DATABASE fairshare;
+5. Create PostgreSQL database:
+```bash
+createdb fairshare
+# Or using psql:
+# psql -U postgres -c "CREATE DATABASE fairshare;"
 ```
 
 6. Run the schema SQL:
 ```bash
-mysql -u root -p fairshare < src/db/schema.sql
+psql -U postgres -d fairshare -f src/db/schema.sql
+```
+
+For existing databases (to add settlement request approval flow), run:
+```bash
+psql -U postgres -d fairshare -f src/db/migrations/001_settlement_requests.sql
 ```
 
 7. Start the backend server:
@@ -127,12 +135,16 @@ The frontend will run on `http://localhost:3000`
 
 ### Users
 - `GET /api/users/profile` - Get current user profile
+- `GET /api/users/balance-summary` - Get "you owe" / "you are owed" across all groups
 - `GET /api/users/search?q=query` - Search users
 
 ### Groups
 - `POST /api/groups` - Create group
 - `GET /api/groups` - Get user's groups
 - `GET /api/groups/:id` - Get group details
+- `PATCH /api/groups/:id` - Update group (name, description)
+- `DELETE /api/groups/:id` - Delete group
+- `POST /api/groups/:id/leave` - Leave group
 - `POST /api/groups/:id/members` - Add member
 - `DELETE /api/groups/:id/members/:userId` - Remove member
 - `PATCH /api/groups/:id/members/:userId/role` - Update member role
@@ -140,12 +152,18 @@ The frontend will run on `http://localhost:3000`
 ### Expenses
 - `POST /api/groups/:id/expenses` - Create expense
 - `GET /api/groups/:id/expenses` - Get group expenses
+- `PATCH /api/groups/:id/expenses/:expenseId` - Update expense
+- `DELETE /api/groups/:id/expenses/:expenseId` - Delete expense
 
 ### Balances
 - `GET /api/groups/:id/balances` - Get group balances
 
 ### Settlements
-- `POST /api/groups/:id/settlements` - Record settlement
+- `POST /api/groups/:id/settlement-requests` - Create settlement request (requires other party approval)
+- `GET /api/groups/:id/settlement-requests` - Get pending requests and my requests
+- `POST /api/groups/:id/settlement-requests/:requestId/approve` - Approve request (creates settlement, updates ledger)
+- `POST /api/groups/:id/settlement-requests/:requestId/reject` - Reject request
+- `POST /api/groups/:id/settlements` - Record settlement directly (legacy)
 - `GET /api/groups/:id/settlements` - Get settlement history
 - `GET /api/groups/:id/optimize-settlements` - Get optimized settlement suggestions
 
@@ -195,8 +213,8 @@ The frontend will run on `http://localhost:3000`
 
 ## 💰 Financial Accuracy
 
-- Uses DECIMAL type for money storage
-- MySQL transactions for atomic operations
+- Uses NUMERIC/DECIMAL type for money storage
+- PostgreSQL transactions for atomic operations
 - Balance normalization
 - Prevents over-settlement
 - Validates split totals match expense amounts
@@ -253,7 +271,7 @@ The system includes a minimal cash flow optimization algorithm that:
 |----------|---------|----------|-------------|
 | `NODE_ENV` | ✅ | - | `production` / `development` |
 | `PORT` | ✅ | - | Server port |
-| `DB_*` | ✅ | - | MySQL connection |
+| `DB_*` | ✅ | - | PostgreSQL connection |
 | `JWT_*` | ✅ | - | JWT secrets and expiry |
 | `CORS_ORIGIN` | ✅ | - | Allowed origins (comma-separated or `*`) |
 | `VITE_API_URL` | - | ✅ | API base URL (optional; use in production if API on different host) |
