@@ -1,5 +1,6 @@
 import * as settlementService from '../services/settlementService.js';
 import { validationResult } from 'express-validator';
+import { parsePagination, paginatedResponse } from '../utils/pagination.js';
 
 export const createSettlement = async (req, res, next) => {
   try {
@@ -27,8 +28,9 @@ export const createSettlement = async (req, res, next) => {
 
 export const getGroupSettlements = async (req, res, next) => {
   try {
-    const settlements = await settlementService.getGroupSettlements(req.params.id, req.user.userId);
-    res.json(settlements);
+    const { page, limit, offset } = parsePagination(req.query);
+    const { rows, total } = await settlementService.getGroupSettlements(req.params.id, req.user.userId, { limit, offset });
+    res.json(paginatedResponse(rows, total, page, limit));
   } catch (error) {
     next(error);
   }

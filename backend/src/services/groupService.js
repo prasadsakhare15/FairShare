@@ -1,7 +1,7 @@
 import * as groupRepository from '../repositories/groupRepository.js';
 
-export const createGroup = async (name, description, createdBy) => {
-  return await groupRepository.createGroup(name, description, createdBy);
+export const createGroup = async (name, description, createdBy, currency) => {
+  return await groupRepository.createGroup(name, description, createdBy, currency);
 };
 
 export const getUserGroups = async (userId) => {
@@ -59,13 +59,13 @@ export const removeMember = async (groupId, userId, memberToRemoveId) => {
   return await groupRepository.removeGroupMember(groupId, memberToRemoveId);
 };
 
-export const updateGroup = async (groupId, name, description, userId) => {
+export const updateGroup = async (groupId, name, description, userId, currency) => {
   const requesterMember = await groupRepository.isGroupMember(groupId, userId);
   if (!requesterMember || requesterMember.role !== 'admin') {
     throw new Error('Only admins can update the group');
   }
 
-  return await groupRepository.updateGroup(groupId, name, description);
+  return await groupRepository.updateGroup(groupId, name, description, currency);
 };
 
 export const deleteGroup = async (groupId, userId) => {

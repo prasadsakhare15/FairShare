@@ -84,9 +84,16 @@ export const createSettlement = async (groupId, fromUserId, toUserId, amount, pa
   }
 };
 
-export const getGroupSettlements = async (groupId) => {
-  const { rows } = await query(
-    `SELECT s.*, 
+export const getGroupSettlements = async (groupId, { limit, offset } = {}) => {
+  const paginate = limit !== undefined && offset !== undefined;
+
+  const { rows: countRows } = await query(
+    `SELECT COUNT(*)::int AS total FROM settlements WHERE group_id = $1`,
+    [groupId]
+  );
+  const total = countRows[0].total;
+
+  let sql = `SELECT s.*, 
             u1.name as from_user_name, 
             u2.name as to_user_name,
             u3.name as created_by_name
@@ -95,8 +102,14 @@ export const getGroupSettlements = async (groupId) => {
      JOIN users u2 ON s.to_user_id = u2.id
      JOIN users u3 ON s.created_by = u3.id
      WHERE s.group_id = $1
-     ORDER BY s.created_at DESC`,
-    [groupId]
-  );
-  return rows;
+     ORDER BY s.created_at DESC`;
+  const params = [groupId];
+
+  if (paginate) {
+    sql += ` LIMIT $2 OFFSET $3`;
+    params.push(limit, offset);
+  }
+
+  const { rows } = await query(sql, params);
+  return { rows, total };
 };

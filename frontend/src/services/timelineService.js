@@ -2,5 +2,5 @@ import api from './api.js';
 
 export const getGroupTimeline = async (groupId) => {
   const response = await api.get(`/groups/${groupId}/timeline`);
-  return response.data;
+  return Array.isArray(response.data) ? response.data : response.data.data;
 };

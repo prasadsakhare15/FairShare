@@ -1,13 +1,13 @@
 import { getClient, query } from '../db/connection.js';
 
-export const createGroup = async (name, description, createdBy) => {
+export const createGroup = async (name, description, createdBy, currency = 'INR') => {
   const client = await getClient();
   try {
     await client.query('BEGIN');
 
     const { rows: groupRows } = await client.query(
-      'INSERT INTO user_groups (name, description, created_by) VALUES ($1, $2, $3) RETURNING id',
-      [name, description, createdBy]
+      'INSERT INTO user_groups (name, description, currency, created_by) VALUES ($1, $2, $3, $4) RETURNING id',
+      [name, description, currency, createdBy]
     );
     const groupId = groupRows[0].id;
 
@@ -27,10 +27,10 @@ export const createGroup = async (name, description, createdBy) => {
   }
 };
 
-export const updateGroup = async (groupId, name, description) => {
+export const updateGroup = async (groupId, name, description, currency) => {
   const result = await query(
-    'UPDATE user_groups SET name = $1, description = $2, updated_at = NOW() WHERE id = $3',
-    [name, description, groupId]
+    'UPDATE user_groups SET name = $1, description = $2, currency = COALESCE($3, currency), updated_at = NOW() WHERE id = $4',
+    [name, description, currency || null, groupId]
   );
   return result.rowCount > 0;
 };

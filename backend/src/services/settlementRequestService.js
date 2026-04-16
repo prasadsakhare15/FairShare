@@ -2,6 +2,8 @@ import * as settlementRequestRepository from '../repositories/settlementRequestR
 import * as settlementRepository from '../repositories/settlementRepository.js';
 import * as groupRepository from '../repositories/groupRepository.js';
 import * as ledgerRepository from '../repositories/ledgerRepository.js';
+import * as userRepository from '../repositories/userRepository.js';
+import * as notificationService from './notificationService.js';
 
 const getApproverId = (request) => {
   return request.initiator_id === request.from_user_id ? request.to_user_id : request.from_user_id;
@@ -46,6 +48,20 @@ export const createRequest = async (groupId, fromUserId, toUserId, amount, initi
     paymentMethod,
     notes
   );
+  
+  // Notification: Send to the OTHER user (the approver)
+  const approverId = initiatorId === fromUserId ? toUserId : fromUserId;
+  const initiatorUser = await userRepository.getUserById(initiatorId);
+  const group = await groupRepository.getGroupById(groupId);
+  
+  await notificationService.createNotification(
+    approverId,
+    'New Settlement Request',
+    `${initiatorUser?.name || 'Someone'} requested to settle ${amount} in "${group?.name || 'a group'}".`,
+    { type: 'settlement_request', request_id: request, group_id: groupId }
+  );
+
+  return request;
 };
 
 export const getGroupRequests = async (groupId, userId) => {
@@ -94,6 +110,18 @@ export const approveRequest = async (groupId, requestId, userId) => {
 
   await settlementRequestRepository.updateRequestStatus(requestId, 'approved');
 
+  // Notification: Send back to the initiator
+  if (request.initiator_id !== userId) {
+    const approverUser = await userRepository.getUserById(userId);
+    const group = await groupRepository.getGroupById(groupId);
+    await notificationService.createNotification(
+      request.initiator_id,
+      'Settlement Request Approved',
+      `${approverUser?.name || 'Someone'} approved your settlement request in "${group?.name || 'a group'}".`,
+      { type: 'settlement_approved', settlement_id: settlementId, group_id: groupId }
+    );
+  }
+
   return settlementId;
 };
 
@@ -118,5 +146,18 @@ export const rejectRequest = async (groupId, requestId, userId) => {
   }
 
   await settlementRequestRepository.updateRequestStatus(requestId, 'rejected');
+
+  // Notification: Send back to the initiator
+  if (request.initiator_id !== userId) {
+    const rejecterUser = await userRepository.getUserById(userId);
+    const group = await groupRepository.getGroupById(groupId);
+    await notificationService.createNotification(
+      request.initiator_id,
+      'Settlement Request Rejected',
+      `${rejecterUser?.name || 'Someone'} rejected your settlement request in "${group?.name || 'a group'}".`,
+      { type: 'settlement_rejected', request_id: requestId, group_id: groupId }
+    );
+  }
+
   return true;
 };

@@ -1,7 +1,7 @@
 import api from './api.js';
 
-export const createGroup = async (name, description) => {
-  const response = await api.post('/groups', { name, description });
+export const createGroup = async (name, description, currency) => {
+  const response = await api.post('/groups', { name, description, currency });
   return response.data;
 };
 
@@ -15,8 +15,8 @@ export const getGroupDetails = async (groupId) => {
   return response.data;
 };
 
-export const updateGroup = async (groupId, { name, description }) => {
-  const response = await api.patch(`/groups/${groupId}`, { name, description });
+export const updateGroup = async (groupId, { name, description, currency }) => {
+  const response = await api.patch(`/groups/${groupId}`, { name, description, currency });
   return response.data;
 };
 

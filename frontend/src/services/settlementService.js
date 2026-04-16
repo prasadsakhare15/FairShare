@@ -27,7 +27,7 @@ export const createSettlement = async (groupId, settlementData) => {
 
 export const getGroupSettlements = async (groupId) => {
   const response = await api.get(`/groups/${groupId}/settlements`);
-  return response.data;
+  return Array.isArray(response.data) ? response.data : response.data.data;
 };
 
 export const getOptimizedSettlements = async (groupId) => {

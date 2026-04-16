@@ -20,6 +20,7 @@ import expenseRoutes from './routes/expenseRoutes.js';
 import balanceRoutes from './routes/balanceRoutes.js';
 import settlementRoutes from './routes/settlementRoutes.js';
 import timelineRoutes from './routes/timelineRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 
 
 const app = express();
@@ -75,6 +76,7 @@ app.use('/api', expenseRoutes);
 app.use('/api', balanceRoutes);
 app.use('/api', settlementRoutes);
 app.use('/api', timelineRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // 404
 app.use((req, res) => {

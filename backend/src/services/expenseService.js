@@ -46,14 +46,14 @@ export const createExpense = async (groupId, title, amount, paidBy, splitType, s
   );
 };
 
-export const getGroupExpenses = async (groupId, userId) => {
+export const getGroupExpenses = async (groupId, userId, pagination = {}) => {
   // Validate group membership
   const member = await groupRepository.isGroupMember(groupId, userId);
   if (!member) {
     throw new Error('You are not a member of this group');
   }
   
-  return await expenseRepository.getGroupExpenses(groupId);
+  return await expenseRepository.getGroupExpenses(groupId, pagination);
 };
 
 export const updateExpense = async (groupId, expenseId, title, amount, paidBy, splitType, splits, userId) => {

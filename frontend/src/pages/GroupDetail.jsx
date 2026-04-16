@@ -12,6 +12,12 @@ import { formatCurrency } from '../utils/formatUtils';
 import { useToast } from '../context/ToastContext';
 import SkeletonLoader from '../components/SkeletonLoader';
 
+import AddExpenseModal from '../components/modals/AddExpenseModal';
+import SettleUpModal from '../components/modals/SettleUpModal';
+import AddMemberModal from '../components/modals/AddMemberModal';
+import EditGroupModal from '../components/modals/EditGroupModal';
+
+
 const GroupDetail = () => {
   const { showToast } = useToast();
   const { id } = useParams();
@@ -288,6 +294,7 @@ const GroupDetail = () => {
               settlements={settlements}
               settlementRequests={settlementRequests}
               optimizedSettlements={optimizedSettlements}
+              group={group}
               onSettleUp={() => setShowSettleUp(true)}
               onApproveRequest={async (requestId) => {
                 await approveSettlementRequest(id, requestId);
@@ -425,7 +432,7 @@ const ExpensesTab = ({ expenses, group, onAddExpense, onEditExpense, onDeleteExp
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{expense.title}</h3>
                   <span className="text-lg font-bold text-green-600 dark:text-green-400">
-                    {formatCurrency(expense.amount)}
+                    {formatCurrency(expense.amount, group?.currency)}
                   </span>
                 </div>
                 <div className="flex gap-2">
@@ -451,7 +458,7 @@ const ExpensesTab = ({ expenses, group, onAddExpense, onEditExpense, onDeleteExp
                 <ul className="space-y-1">
                   {expense.splits?.map((split) => (
                     <li key={split.user_id} className="text-sm text-gray-600 dark:text-gray-400">
-                      {split.user_name}: {formatCurrency(split.amount)}
+                      {split.user_name}: {formatCurrency(split.amount, group?.currency)}
                       {split.percentage && ` (${split.percentage}%)`}
                     </li>
                   ))}
@@ -491,7 +498,7 @@ const BalancesTab = ({ balances, group, onSettleUp, onSettlementAdded }) => {
                 <span className="font-semibold">{balance.to_user_name}</span>
               </p>
               <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-2">
-                {formatCurrency(balance.amount)}
+                {formatCurrency(balance.amount, group?.currency)}
               </p>
             </div>
           ))}
@@ -502,7 +509,7 @@ const BalancesTab = ({ balances, group, onSettleUp, onSettlementAdded }) => {
 };
 
 // Settlements Tab Component
-const SettlementsTab = ({ settlements, settlementRequests, optimizedSettlements, onSettleUp, onApproveRequest, onRejectRequest }) => {
+const SettlementsTab = ({ settlements, settlementRequests, optimizedSettlements, group, onSettleUp, onApproveRequest, onRejectRequest }) => {
   const { showToast } = useToast();
   const [processingId, setProcessingId] = useState(null);
   const { pendingForApproval = [], myRequests = [] } = settlementRequests || {};
@@ -559,7 +566,7 @@ const SettlementsTab = ({ settlements, settlementRequests, optimizedSettlements,
                   <span className="font-semibold">{request.to_user_name}</span>
                 </p>
                 <p className="text-xl font-bold text-green-600 dark:text-green-400 mt-2">
-                  {formatCurrency(request.amount)}
+                  {formatCurrency(request.amount, group?.currency)}
                 </p>
                 {request.notes && (
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Notes: {request.notes}</p>
@@ -604,7 +611,7 @@ const SettlementsTab = ({ settlements, settlementRequests, optimizedSettlements,
                 <p className="text-lg text-gray-900 dark:text-white">
                   <span className="font-semibold">{request.from_user_name}</span> paid{' '}
                   <span className="font-semibold">{request.to_user_name}</span>{' '}
-                  {formatCurrency(request.amount)}
+                  {formatCurrency(request.amount, group?.currency)}
                 </p>
                 <p className="text-sm mt-2">
                   {request.status === 'pending' && (
@@ -646,7 +653,7 @@ const SettlementsTab = ({ settlements, settlementRequests, optimizedSettlements,
                     {suggestion.from_user_name} should pay {suggestion.to_user_name}
                   </p>
                   <p className="text-lg text-green-600 dark:text-green-400 font-bold">
-                    {formatCurrency(suggestion.amount)}
+                    {formatCurrency(suggestion.amount, group?.currency)}
                   </p>
                 </div>
               ))}
@@ -670,7 +677,7 @@ const SettlementsTab = ({ settlements, settlementRequests, optimizedSettlements,
                   <span className="font-semibold">{settlement.to_user_name}</span>
                 </p>
                 <p className="text-xl font-bold text-green-600 dark:text-green-400 mt-2">
-                  {formatCurrency(settlement.amount)}
+                  {formatCurrency(settlement.amount, group?.currency)}
                 </p>
                 {settlement.payment_method && (
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -741,7 +748,7 @@ const TimelineTab = ({ timeline, group }) => {
                             </p>
                           </div>
                           <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                            {formatCurrency(item.amount)}
+                            {formatCurrency(item.amount, group?.currency)}
                           </span>
                         </div>
                         {item.splits && item.splits.length > 0 && (
@@ -756,7 +763,7 @@ const TimelineTab = ({ timeline, group }) => {
                           {item.from_user_name} paid {item.to_user_name}
                         </p>
                         <p className="text-xl font-bold text-green-600 dark:text-green-400 mt-1">
-                          {formatCurrency(item.amount)}
+                          {formatCurrency(item.amount, group?.currency)}
                         </p>
                         {item.payment_method && (
                           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -844,601 +851,7 @@ const MembersTab = ({ group, currentUserId, onAddMember, onRemoveMember }) => {
   );
 };
 
-// Add Expense Modal Component
-const AddExpenseModal = ({ group, expense, onClose, onSubmit }) => {
-  const { showToast } = useToast();
-  const isEdit = !!expense;
-  const [title, setTitle] = useState('');
-  const [amount, setAmount] = useState('');
-  const [paidBy, setPaidBy] = useState('');
-  const [splitType, setSplitType] = useState('equal');
-  const [splits, setSplits] = useState([]);
-  const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (expense && group?.members) {
-      setTitle(expense.title);
-      setAmount(String(expense.amount));
-      setPaidBy(String(expense.paid_by));
-      setSplitType(expense.split_type);
-      const existingMap = new Map((expense.splits ?? []).map((s) => [s.user_id, s]));
-      setSplits(
-        group.members.map((member) => {
-          const existing = existingMap.get(member.id);
-          return existing
-            ? { user_id: member.id, amount: parseFloat(existing.amount), percentage: existing.percentage ? parseFloat(existing.percentage) : null }
-            : { user_id: member.id, amount: 0, percentage: null };
-        })
-      );
-    }
-  }, [expense?.id, group?.members]);
 
-  useEffect(() => {
-    if (group?.members && !expense) {
-      if (splitType === 'equal' && group.members.length > 0) {
-        const equalAmount = amount ? (parseFloat(amount) / group.members.length).toFixed(2) : 0;
-        setSplits(
-          group.members.map((member) => ({
-            user_id: member.id,
-            amount: parseFloat(equalAmount),
-            percentage: null,
-          }))
-        );
-      } else if (splitType === 'exact' && splits.length === 0) {
-        setSplits(
-          group.members.map((member) => ({
-            user_id: member.id,
-            amount: 0,
-            percentage: null,
-          }))
-        );
-      } else if (splitType === 'percentage' && splits.length === 0) {
-        setSplits(
-          group.members.map((member) => ({
-            user_id: member.id,
-            amount: 0,
-            percentage: 0,
-          }))
-        );
-      }
-    }
-  }, [splitType, amount, group?.members]);
-
-  useEffect(() => {
-    if (splitType === 'percentage' && amount) {
-      const totalAmount = parseFloat(amount);
-      setSplits((prev) =>
-        prev.map((split) => ({
-          ...split,
-          amount: (totalAmount * (split.percentage || 0)) / 100,
-        }))
-      );
-    }
-  }, [splitType, amount]);
-
-  const handleSplitChange = (userId, field, value) => {
-    setSplits((prev) =>
-      prev.map((split) => {
-        if (split.user_id === userId) {
-          if (field === 'percentage') {
-            const percentage = parseFloat(value) || 0;
-            const newAmount = amount ? (parseFloat(amount) * percentage) / 100 : 0;
-            return { ...split, percentage, amount: newAmount };
-          } else {
-            return { ...split, amount: parseFloat(value) || 0 };
-          }
-        }
-        return split;
-      })
-    );
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!paidBy) {
-      showToast('Please select who paid');
-      return;
-    }
-
-    const totalSplit = splits.reduce((sum, split) => sum + split.amount, 0);
-    if (Math.abs(totalSplit - parseFloat(amount)) > 0.01) {
-      showToast(`Split total (${formatCurrency(totalSplit)}) does not match expense amount`);
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      await onSubmit({
-        title,
-        amount: parseFloat(amount),
-        paid_by: parseInt(paidBy),
-        split_type: splitType,
-        splits: splits.filter((s) => s.amount > 0),
-      });
-      setTitle('');
-      setAmount('');
-      setPaidBy('');
-      setSplitType('equal');
-      setSplits([]);
-    } catch (error) {
-      const data = error.response?.data;
-      const message = error.userMessage
-        || (data?.errors?.length ? data.errors.map((e) => e.msg || e.message).join(', ') : null)
-        || data?.error
-        || 'Failed to create expense';
-      showToast(message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700">
-        <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">{isEdit ? 'Edit Expense' : 'Add Expense'}</h3>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Title
-            </label>
-            <input
-              type="text"
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-              placeholder="e.g., Dinner at restaurant"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Amount
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              min="0.01"
-              required
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-              placeholder="0.00"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Paid By
-            </label>
-            <select
-              required
-              value={paidBy}
-              onChange={(e) => setPaidBy(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            >
-              <option value="">Select a member</option>
-              {group?.members?.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Split Type
-            </label>
-            <select
-              value={splitType}
-              onChange={(e) => setSplitType(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            >
-              <option value="equal">Equal</option>
-              <option value="exact">Exact Amount</option>
-              <option value="percentage">Percentage</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Split Details
-            </label>
-            <div className="space-y-2">
-              {splits.map((split) => {
-                const member = group?.members?.find((m) => m.id === split.user_id);
-                return (
-                  <div key={split.user_id} className="flex items-center space-x-2">
-                    <span className="w-32 text-sm text-gray-900 dark:text-white">{member?.name}:</span>
-                    {splitType === 'percentage' ? (
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="100"
-                        value={split.percentage || 0}
-                        onChange={(e) =>
-                          handleSplitChange(split.user_id, 'percentage', e.target.value)
-                        }
-                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        placeholder="%"
-                      />
-                    ) : (
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={split.amount || 0}
-                        onChange={(e) =>
-                          handleSplitChange(split.user_id, 'amount', e.target.value)
-                        }
-                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        placeholder="0.00"
-                      />
-                    )}
-                    <span className="text-sm text-gray-600 dark:text-gray-400 w-20">
-                      {formatCurrency(split.amount ?? 0)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-              Total: {formatCurrency(splits.reduce((sum, s) => sum + s.amount, 0))} / {formatCurrency(amount || 0)}
-            </p>
-          </div>
-
-          <div className="flex justify-end space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 rounded-md hover:bg-gray-300 dark:hover:bg-gray-500"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50"
-            >
-              {submitting ? (isEdit ? 'Saving...' : 'Adding...') : (isEdit ? 'Save Changes' : 'Add Expense')}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
-
-// Settle Up Modal Component
-const SettleUpModal = ({ balances, group, onClose, onSubmit }) => {
-  const { showToast } = useToast();
-  const [fromUserId, setFromUserId] = useState('');
-  const [toUserId, setToUserId] = useState('');
-  const [amount, setAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('');
-  const [notes, setNotes] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
-  const availableBalances = balances.filter((b) => b.from_user_id === parseInt(fromUserId));
-
-  useEffect(() => {
-    if (fromUserId && toUserId) {
-      const balance = balances.find(
-        (b) => b.from_user_id === parseInt(fromUserId) && b.to_user_id === parseInt(toUserId)
-      );
-      if (balance) {
-        setAmount(parseFloat(balance.amount).toFixed(2));
-      }
-    }
-  }, [fromUserId, toUserId, balances]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!fromUserId || !toUserId || !amount) {
-      showToast('Please fill all required fields');
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      await onSubmit({
-        from_user_id: parseInt(fromUserId),
-        to_user_id: parseInt(toUserId),
-        amount: parseFloat(amount),
-        payment_method: paymentMethod || null,
-        notes: notes || null,
-      });
-      setFromUserId('');
-      setToUserId('');
-      setAmount('');
-      setPaymentMethod('');
-      setNotes('');
-    } catch (error) {
-      showToast(error.userMessage || error.response?.data?.error || 'Failed to create settlement request');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full border border-gray-200 dark:border-gray-700">
-        <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Settle Up</h3>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Who is paying?
-            </label>
-            <select
-              required
-              value={fromUserId}
-              onChange={(e) => {
-                setFromUserId(e.target.value);
-                setToUserId('');
-                setAmount('');
-              }}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            >
-              <option value="">Select payer</option>
-              {group?.members?.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {fromUserId && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Paying to
-              </label>
-              <select
-                required
-                value={toUserId}
-                onChange={(e) => setToUserId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              >
-                <option value="">Select receiver</option>
-                {availableBalances.map((balance) => {
-                  const member = group?.members?.find((m) => m.id === balance.to_user_id);
-                  return (
-                    <option key={balance.to_user_id} value={balance.to_user_id}>
-                      {member?.name} ({formatCurrency(balance.amount)})
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Amount
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              min="0.01"
-              required
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-              placeholder="0.00"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Payment Method (optional)
-            </label>
-            <input
-              type="text"
-              value={paymentMethod}
-              onChange={(e) => setPaymentMethod(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-              placeholder="e.g., Cash, Venmo, Bank Transfer"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Notes (optional)
-            </label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-              rows="3"
-              placeholder="Add any notes..."
-            />
-          </div>
-
-          <div className="flex justify-end space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 rounded-md hover:bg-gray-300 dark:hover:bg-gray-500"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50"
-            >
-              {submitting ? 'Recording...' : 'Record Settlement'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
-
-// Add Member Modal Component
-const AddMemberModal = ({ group, searchResults, onSearch, onClose, onMemberAdded }) => {
-  const { showToast } = useToast();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [adding, setAdding] = useState(false);
-
-  const handleAddMember = async (userId) => {
-    setAdding(true);
-    try {
-      await addGroupMember(group.id, userId);
-      await onMemberAdded();
-    } catch (error) {
-      showToast(error.userMessage || error.response?.data?.error || 'Failed to add member');
-    } finally {
-      setAdding(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full border border-gray-200 dark:border-gray-700">
-        <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Add Member</h3>
-        <div className="mb-4">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              onSearch(e.target.value);
-            }}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-            placeholder="Search by name or email..."
-          />
-        </div>
-        {searchResults.length > 0 && (
-          <div className="space-y-2 max-h-64 overflow-y-auto">
-            {searchResults.map((user) => (
-              <div
-                key={user.id}
-                className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600"
-              >
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-white">{user.name}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{user.email}</p>
-                </div>
-                <button
-                  onClick={() => handleAddMember(user.id)}
-                  disabled={adding}
-                  className="px-3 py-1 bg-blue-600 dark:bg-blue-500 text-white rounded text-sm hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50"
-                >
-                  Add
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-        <div className="flex justify-end mt-4">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 rounded-md hover:bg-gray-300 dark:hover:bg-gray-500"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Edit Group Modal Component
-const EditGroupModal = ({ group, onClose, onSave, onDelete }) => {
-  const { showToast } = useToast();
-  const [name, setName] = useState(group?.name ?? '');
-  const [description, setDescription] = useState(group?.description ?? '');
-  const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-
-  useEffect(() => {
-    setName(group?.name ?? '');
-    setDescription(group?.description ?? '');
-  }, [group?.id]);
-
-  const handleSave = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      await onSave({ name, description });
-    } catch (error) {
-      alert(error.userMessage || error.response?.data?.error || 'Failed to update group');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    setDeleting(true);
-    try {
-      await onDelete();
-    } catch (error) {
-      showToast(error.userMessage || error.response?.data?.error || 'Failed to delete group');
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full border border-gray-200 dark:border-gray-700">
-        <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Edit Group</h3>
-        <form onSubmit={handleSave} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Group Name</label>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              placeholder="e.g., Weekend Trip"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description (optional)</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              rows="3"
-              placeholder="Add a description..."
-            />
-          </div>
-          <div className="flex justify-between pt-4">
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={deleting}
-              className="px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md disabled:opacity-50"
-            >
-              {deleting ? 'Deleting...' : 'Delete Group'}
-            </button>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 rounded-md hover:bg-gray-300 dark:hover:bg-gray-500"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50"
-              >
-                {saving ? 'Saving...' : 'Save'}
-              </button>
-            </div>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
 
 export default GroupDetail;

@@ -8,10 +8,10 @@ export const createGroup = async (req, res, next) => {
       return res.status(400).json({ errors: errors.array() });
     }
     
-    const { name, description } = req.body;
-    const groupId = await groupService.createGroup(name, description, req.user.userId);
+    const { name, description, currency } = req.body;
+    const groupId = await groupService.createGroup(name, description, req.user.userId, currency || 'INR');
     
-    res.status(201).json({ id: groupId, name, description });
+    res.status(201).json({ id: groupId, name, description, currency: currency || 'INR' });
   } catch (error) {
     next(error);
   }
@@ -42,8 +42,8 @@ export const updateGroup = async (req, res, next) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { name, description } = req.body;
-    await groupService.updateGroup(req.params.id, name, description, req.user.userId);
+    const { name, description, currency } = req.body;
+    await groupService.updateGroup(req.params.id, name, description, req.user.userId, currency);
 
     res.json({ message: 'Group updated successfully' });
   } catch (error) {

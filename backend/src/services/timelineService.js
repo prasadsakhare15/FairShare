@@ -2,18 +2,16 @@ import * as expenseRepository from '../repositories/expenseRepository.js';
 import * as settlementRepository from '../repositories/settlementRepository.js';
 import * as groupRepository from '../repositories/groupRepository.js';
 
-export const getGroupTimeline = async (groupId, userId) => {
+export const getGroupTimeline = async (groupId, userId, pagination = {}) => {
   // Validate group membership
   const member = await groupRepository.isGroupMember(groupId, userId);
   if (!member) {
     throw new Error('You are not a member of this group');
   }
   
-  // Get expenses
-  const expenses = await expenseRepository.getGroupExpenses(groupId);
-  
-  // Get settlements
-  const settlements = await settlementRepository.getGroupSettlements(groupId);
+  // Get ALL expenses and settlements (no pagination here — we paginate the merged result)
+  const { rows: expenses } = await expenseRepository.getGroupExpenses(groupId);
+  const { rows: settlements } = await settlementRepository.getGroupSettlements(groupId);
   
   // Combine and sort by date
   const timeline = [
@@ -47,6 +45,14 @@ export const getGroupTimeline = async (groupId, userId) => {
   
   // Sort by created_at descending
   timeline.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  
-  return timeline;
+
+  const total = timeline.length;
+
+  // Paginate the merged result
+  if (pagination.limit !== undefined && pagination.offset !== undefined) {
+    const sliced = timeline.slice(pagination.offset, pagination.offset + pagination.limit);
+    return { rows: sliced, total };
+  }
+
+  return { rows: timeline, total };
 };

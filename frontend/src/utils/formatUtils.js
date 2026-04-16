@@ -1,6 +1,12 @@
-const CURRENCY_SYMBOL = 'Rs.';
+export const CURRENCY_SYMBOLS = {
+  INR: '₹',
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+};
 
-export function formatCurrency(amount) {
+export function formatCurrency(amount, currencyCode = 'INR') {
   const value = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
-  return `${CURRENCY_SYMBOL} ${value.toFixed(2)}`;
+  const symbol = CURRENCY_SYMBOLS[currencyCode] || currencyCode || 'Rs.';
+  return `${symbol} ${value.toFixed(2)}`;
 }

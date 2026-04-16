@@ -34,3 +34,18 @@ export const searchUsers = async (search, excludeUserId) => {
   );
   return rows;
 };
+
+export const updateUser = async (id, name) => {
+  const { rows } = await query(
+    `UPDATE users SET name = $1, updated_at = NOW() WHERE id = $2 RETURNING id, name, email, created_at`,
+    [name, id]
+  );
+  return rows[0];
+};
+
+export const updatePassword = async (id, passwordHash) => {
+  await query(
+    `UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2`,
+    [passwordHash, id]
+  );
+};

@@ -33,14 +33,14 @@ export const createSettlement = async (groupId, fromUserId, toUserId, amount, pa
   );
 };
 
-export const getGroupSettlements = async (groupId, userId) => {
+export const getGroupSettlements = async (groupId, userId, pagination = {}) => {
   // Validate group membership
   const member = await groupRepository.isGroupMember(groupId, userId);
   if (!member) {
     throw new Error('You are not a member of this group');
   }
   
-  return await settlementRepository.getGroupSettlements(groupId);
+  return await settlementRepository.getGroupSettlements(groupId, pagination);
 };
 
 export const getOptimizedSettlements = async (groupId, userId) => {

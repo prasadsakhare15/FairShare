@@ -95,18 +95,33 @@ const upsertLedger = async (client, groupId, fromUserId, toUserId, amount) => {
   );
 };
 
-export const getGroupExpenses = async (groupId) => {
-  const { rows } = await query(
-    `SELECT e.*, 
+export const getGroupExpenses = async (groupId, { limit, offset } = {}) => {
+  const paginate = limit !== undefined && offset !== undefined;
+
+  // Get total count
+  const { rows: countRows } = await query(
+    `SELECT COUNT(*)::int AS total FROM expenses WHERE group_id = $1`,
+    [groupId]
+  );
+  const total = countRows[0].total;
+
+  // Get paginated expenses
+  let sql = `SELECT e.*, 
             u1.name as paid_by_name, 
             u2.name as created_by_name
      FROM expenses e
      JOIN users u1 ON e.paid_by = u1.id
      JOIN users u2 ON e.created_by = u2.id
      WHERE e.group_id = $1
-     ORDER BY e.created_at DESC`,
-    [groupId]
-  );
+     ORDER BY e.created_at DESC`;
+  const params = [groupId];
+
+  if (paginate) {
+    sql += ` LIMIT $2 OFFSET $3`;
+    params.push(limit, offset);
+  }
+
+  const { rows } = await query(sql, params);
   
   // Get splits for each expense
   for (const expense of rows) {
@@ -120,7 +135,7 @@ export const getGroupExpenses = async (groupId) => {
     expense.splits = splits;
   }
   
-  return rows;
+  return { rows, total };
 };
 
 const reverseLedgerBalance = async (client, groupId, paidBy, splits) => {

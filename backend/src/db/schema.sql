@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS user_groups (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   description TEXT,
+  currency VARCHAR(10) NOT NULL DEFAULT 'INR',
   created_by INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
@@ -129,3 +130,17 @@ CREATE INDEX IF NOT EXISTS idx_settlements_to_user ON settlements(to_user_id);
 CREATE INDEX IF NOT EXISTS idx_settlements_created_at ON settlements(created_at);
 CREATE INDEX IF NOT EXISTS idx_settlement_requests_group ON settlement_requests(group_id);
 CREATE INDEX IF NOT EXISTS idx_settlement_requests_status ON settlement_requests(status);
+
+-- Notifications table
+CREATE TABLE IF NOT EXISTS notifications (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title VARCHAR(255) NOT NULL,
+  message TEXT NOT NULL,
+  is_read BOOLEAN DEFAULT FALSE,
+  metadata JSONB,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);

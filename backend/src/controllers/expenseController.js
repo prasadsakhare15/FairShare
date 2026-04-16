@@ -1,5 +1,6 @@
 import * as expenseService from '../services/expenseService.js';
 import { validationResult } from 'express-validator';
+import { parsePagination, paginatedResponse } from '../utils/pagination.js';
 
 export const createExpense = async (req, res, next) => {
   try {
@@ -27,8 +28,9 @@ export const createExpense = async (req, res, next) => {
 
 export const getGroupExpenses = async (req, res, next) => {
   try {
-    const expenses = await expenseService.getGroupExpenses(req.params.id, req.user.userId);
-    res.json(expenses);
+    const { page, limit, offset } = parsePagination(req.query);
+    const { rows, total } = await expenseService.getGroupExpenses(req.params.id, req.user.userId, { limit, offset });
+    res.json(paginatedResponse(rows, total, page, limit));
   } catch (error) {
     next(error);
   }

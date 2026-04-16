@@ -7,7 +7,8 @@ export const createExpense = async (groupId, expenseData) => {
 
 export const getGroupExpenses = async (groupId) => {
   const response = await api.get(`/groups/${groupId}/expenses`);
-  return response.data;
+  // Handle paginated response envelope { data: [...], pagination: {...} }
+  return Array.isArray(response.data) ? response.data : response.data.data;
 };
 
 export const updateExpense = async (groupId, expenseId, expenseData) => {
